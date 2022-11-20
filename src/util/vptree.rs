@@ -42,7 +42,7 @@ impl<D: Float, T: MetricPoint<Dist = D>> VPTree<D, T> {
 
         let n = points.len();
 
-        let mut rng = rand::rngs::SmallRng::seed_from_u64(0u64);
+        let mut rng = rand::rngs::SmallRng::seed_from_u64(0xfaceu64);
         
         let root_idx = (rng.next_u32() as usize) % n;
         points.swap(0, root_idx);

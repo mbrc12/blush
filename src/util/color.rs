@@ -2,85 +2,76 @@
 
 use std::{path::Path, fs, io};
 
+use color_space::{Lch, Rgb};
 use egui::Color32;
 
 use super::vptree::{VPTree, MetricPoint};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Color {
-    pub lightness: f64,
+    pub luminance: f64,
     pub chroma: f64,
     pub hue: f64
 }
 
-fn hex_digit_to_int(x: u8) -> u8 {
-    if x >= 97 {
-        x - 97 + 10
-    } else {
-        x - 48
-    }
-}
-
-fn int_to_hex_digit(x: u8) -> u8 {
-    if x < 10 {
-        x + 48
-    } else {
-        x - 10 + 97
-    }
-}
-
 impl Color {
     pub fn from_hex(hex: &str) -> Self {
-        let b = hex[1..]
-            .to_lowercase()
-            .as_bytes()
-            .iter()
-            .map(|x| {hex_digit_to_int(*x) as f64})
-            .collect::<Vec<f64>>();
-
-        assert!(b.len() == 6);
-
-        let (r, g, b) = (b[0] * 16.0 + b[1], b[2] * 16.0 + b[3], b[4] * 16.0 + b[5]);
-
-        let (hue, saturation, lightness) = hsluv::rgb_to_hsluv(r/256.0, g/256.0, b/256.0);
+        let Lch{l, c, h} = 
+            color_space::Rgb::from_hex(u32::from_str_radix(&hex[1..], 16).unwrap()).into();
 
         Color {
-            hue: hue/360.,
-            saturation: saturation/100.,
-            lightness: lightness/100.
+            hue: h/360.0,
+            luminance: l/100.0,
+            chroma: c/100.0,
         }
     }
 
     pub fn to_hex(self) -> String {
-        let Color { hue, saturation, lightness } = self;
-        let (r, g, b) = hsluv_to_rgb(hue * 360., saturation * 100., lightness * 100.);
-        let r = (r * 256.).round() as u8;
-        let g = (g * 256.).round() as u8;
-        let b = (b * 256.).round() as u8;
+        let Color { luminance, chroma, hue } = self;
+        let Rgb{r, g, b} =
+            color_space::Lch::new(luminance * 100., chroma * 100., hue * 360.).into();
 
-        let bytes = [(r as u8)/16, (r as u8) % 16, (g as u8) / 16, (g as u8) % 16,
-        (b as u8)/16, (b as u8) % 16]
-            .map(int_to_hex_digit);
+        let r = r.round() as u32;
+        let g = g.round() as u32;
+        let b = b.round() as u32;
+        let hex = r * 256 * 256 + g * 256 + b; 
 
-        let mut s = String::from_utf8(bytes.into()).unwrap();
+        let mut s = format!("{:06x}", hex);
         s.insert(0, '#');
         s
     }
 
     pub fn to_color32(self) -> Color32 {
-        let Color { hue, saturation, lightness } = self;
-        let (r, g, b) = hsluv_to_rgb(hue * 360., saturation * 100., lightness * 100.);
-        let r = (r * 256.).round() as u8;
-        let g = (g * 256.).round() as u8;
-        let b = (b * 256.).round() as u8;
+        let Color { luminance, chroma, hue } = self;
+        let Rgb{r, g, b} =
+            color_space::Lch::new(luminance * 100., chroma * 100., hue * 360.).into();
 
-        Color32::from_rgb(r as u8, g as u8, b as u8)
+        let r = r.round() as u8;
+        let g = g.round() as u8;
+        let b = b.round() as u8;
+
+        Color32::from_rgb(r, g, b)
+    }
+
+    pub fn rotate(self, amount: f64) -> Color {
+        Color{ luminance: self.luminance, chroma: self.chroma, hue: (self.hue + amount + 1.0) % 1.0 }
+    }
+
+
+    /* Return a very light or very dark color to be used to overlay on top of the current
+     * background color, usually for dots or text */
+    pub fn borw(self) -> Color32 {
+        if self.luminance < 0.5 {
+            Color32::WHITE
+        } else {
+            Color32::BLACK
+        }
     }
 }
 
 #[test]
 fn test_inverse_color() {
-    let hex = "#de5d83";
+    let hex = "#0e5d83";
     assert_eq!(hex, Color::from_hex(hex).to_hex());
 }
 
@@ -91,12 +82,46 @@ impl MetricPoint for Color {
     type Dist = f64;
 
     fn dist(from: &Self, to: &Self) -> Self::Dist {
-        let Color{lightness: l1, chroma: c1, hue: h1} = from;
-        let Color{lightness: l2, chroma: c2, hue: h2} = to;
+        let Color{luminance: l1, chroma: c1, hue: h1} = from;
+        let Color{luminance: l2, chroma: c2, hue: h2} = to;
         
         let hdist = (h1 - h2).abs().min(1. - (h1 - h2).abs());
         hdist + (c2 - c1).abs() + (l2 - l1).abs()
     }
+}
+
+pub fn luminance_lerp(start: f64, end: f64) -> Lerp {
+    Lerp{
+        lerp: Box::new(move |color: Color, t| Color{luminance: start + (end - start) * t, ..color}),
+        position: Box::new(move |color: Color| (color.luminance - start)/(end - start))
+    }
+}
+
+pub fn chroma_lerp(start: f64, end: f64) -> Lerp {
+    Lerp{
+        lerp: Box::new(move |color: Color, t| Color{chroma: start + (end - start) * t, ..color}),
+        position: Box::new(move |color: Color| (color.chroma - start)/(end - start))
+    }
+}
+
+pub fn hue_lerp(start: f64, end: f64) -> Lerp {
+    Lerp{
+        lerp: Box::new(move |color: Color, t| Color{hue: start + (end - start) * t, ..color}),
+        position: Box::new(move |color: Color| (color.hue - start)/(end - start))
+    }
+}
+
+
+// list of shades, and position of current shade in that list
+pub fn shades(base_color: Color, max_shades: usize, lerp: &Lerp) -> (Vec<Color>, usize) {
+    let width = 1.0 / max_shades as f64;
+    let index = ((lerp.position)(base_color) / width).floor() as usize;
+    let modulus = (lerp.position)(base_color) % width;
+
+    ((0 .. max_shades)
+        .map(|x| width * (x as f64) + modulus)
+        .map(|t| (lerp.lerp)(base_color, t))
+        .collect(), index)
 }
 
 
@@ -132,7 +157,10 @@ impl PartialEq for NamedColor {
 }
 
 pub type ColorDB = VPTree<f64, NamedColor>;
-pub type Lerp = Box<dyn Fn(Color, f64) -> Color>;
+pub struct Lerp {
+    pub lerp: Box<dyn Fn(Color, f64) -> Color>,
+    pub position: Box<dyn Fn(Color) -> f64>,
+}
 
 pub fn load_db(path: &Path) -> Result<ColorDB, io::Error> {
     let data = fs::read_to_string(path)?;
@@ -160,32 +188,14 @@ pub fn quantize_color(db: &ColorDB, color: Color) -> &NamedColor {
     db.nearest(&named_color)
 }
 
-pub fn lightness_lerp(start: f64, end: f64) -> Lerp {
-    Box::new(move |color: Color, t| Color{lightness: start + (end - start) * t, ..color})
-}
 
-pub fn chroma_lerp(start: f64, end: f64) -> Lerp {
-    Box::new(move |color: Color, t| Color{chroma: start + (end - start) * t, ..color})
-}
+// pub fn shades_quantized(db: &ColorDB, base_color: Color, max_shades: usize, lerp: Lerp) -> Vec<&NamedColor> {
+//     let mut shades = (0 .. max_shades)
+//         .map(|x| (x as f64) / (max_shades as f64))
+//         .map(|t| quantize_color(db, lerp(base_color, t)))
+//         .collect::<Vec<&NamedColor>>();
 
-pub fn hue_lerp(start: f64, end: f64) -> Lerp {
-    Box::new(move |color: Color, t| Color{hue: start + (end - start) * t, ..color})
-}
+//     shades.dedup();
 
-pub fn shades(base_color: Color, max_shades: usize, lerp: Lerp) -> Vec<Color> {
-    (0 .. max_shades)
-        .map(|x| (x as f64) / (max_shades as f64))
-        .map(|t| lerp(base_color, t))
-        .collect()
-}
-
-pub fn shades_quantized(db: &ColorDB, base_color: Color, max_shades: usize, lerp: Lerp) -> Vec<&NamedColor> {
-    let mut shades = (0 .. max_shades)
-        .map(|x| (x as f64) / (max_shades as f64))
-        .map(|t| quantize_color(db, lerp(base_color, t)))
-        .collect::<Vec<&NamedColor>>();
-
-    shades.dedup();
-
-    shades
-}
+//     shades
+// }

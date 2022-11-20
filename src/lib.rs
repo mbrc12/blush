@@ -2,11 +2,11 @@ mod widgets;
 pub mod util;
 use std::{path::Path, io};
 
-use util::{color::{Color, NamedColor, hue_lerp, lightness_lerp}, vptree::VPTree};
+use util::{color::{Color, NamedColor, hue_lerp, luminance_lerp, chroma_lerp}, vptree::VPTree};
 
-use egui::{FontFamily, TextStyle, Ui};
+use egui::{FontFamily, TextStyle, Ui, Layout, Align};
 
-use widgets::ShadeStrip;
+use widgets::{ShadeStrip, ThreeStrip};
 
 pub struct Blush {
     db: VPTree<f64, NamedColor>,
@@ -15,22 +15,25 @@ pub struct Blush {
     font: egui::FontId,
 
     base_color: Color,
-    shade_strip: ShadeStrip,
-    shade_strip_2: ShadeStrip,
+    base_color_2: Color,
+    three_strip: ThreeStrip,
+    three_strip_2: ThreeStrip,
 }
 
 impl Blush {
     pub fn new(_cc: &eframe::CreationContext) -> Result<Self, io::Error> {
         let db = util::color::load_db(Path::new("res/colors.json"))?;
         let color = Color::from_hex("#ff355e");
+        let color_2 = Color::from_hex("#dd5ac1");
         Ok(Blush { 
             db,
             shown: false,  
             count: 0,
             font: egui::FontId::new(30.0, FontFamily::Monospace),
             base_color: color,
-            shade_strip: ShadeStrip::new(&color),
-            shade_strip_2: ShadeStrip::new(&color),
+            base_color_2: color_2,
+            three_strip: ThreeStrip::new(&color),
+            three_strip_2: ThreeStrip::new(&color_2),
         })
     }
 
@@ -53,12 +56,13 @@ impl eframe::App for Blush {
             if self.shown {
                 ui.label(format!("I am visible!, {}", self.count));
             }
-
-            // ui.add(self.shade_strip.widget(&self.db, &mut self.base_color));
-            ui.add(self.shade_strip.widget(&mut self.base_color, hue_lerp(0., 1.)));
-            ui.add(self.shade_strip_2.widget(&mut self.base_color, lightness_lerp(0., 1.)));
+            
+            ui.horizontal(|ui| {
+                self.three_strip.place(ui, &mut self.base_color);
+                self.three_strip_2.place(ui, &mut self.base_color_2);
+            });
         });
 
-        resp.response.on_hover_text("Hovered");
+        // resp.response.on_hover_text("Hovered");
     }
 }
