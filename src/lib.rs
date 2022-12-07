@@ -33,8 +33,8 @@ impl Blush {
             font: egui::FontId::new(30.0, FontFamily::Monospace),
             base_color: color,
             base_color_2: color_2,
-            three_strip: ThreeStrip::new(&color),
-            three_strip_2: ThreeStrip::new(&color_2),
+            three_strip: ThreeStrip::new(&color, 400.0, 200.0),
+            three_strip_2: ThreeStrip::new(&color_2, 400.0, 200.0),
         })
     }
 

@@ -1,6 +1,25 @@
 use egui::{Color32, Rounding, Ui, vec2, Sense, Widget, pos2, Stroke, Rect, FontId, Layout};
 use crate::util::color::{Color, ColorDB, shades, Lerp};
 
+#[derive(Clone, Copy)]
+pub struct RoundingLegend {
+    nw: f32,
+    sw: f32,
+    ne: f32, 
+    se: f32
+}
+
+impl RoundingLegend {
+    pub const fn new(nw: i32, sw: i32, ne: i32, se: i32) -> RoundingLegend {
+        RoundingLegend{
+            nw: nw as f32,
+            sw: sw as f32,
+            ne: ne as f32,
+            se: se as f32
+        }
+    }
+}
+
 pub struct ShadeStrip {
     last_color: Color,
     last_index: usize,
@@ -9,18 +28,23 @@ pub struct ShadeStrip {
     new_color: Color,
     max_shade_count: usize,
     just_changed: bool,
+    width: f32,
+    height: f32,
+    lerp: Lerp,
+    rounding_legend: RoundingLegend,
     show_hex: bool,
 }
 
 impl ShadeStrip {
-    const MIN_WIDTH: f32 = 400f32;
-    const MIN_HEIGHT: f32 = 50f32;
-    const ROUND_RADIUS: f32 = 5f32;
-    const DOT_RADIUS: f32 = 5f32;
-    const SELECT_WIDTH: f32 = 2f32;
+    const ASPECT_RATIO: f32 = 8.0;
+    const ROUND_RADIUS_FRAC: f32 = 0.02;
+    const DOT_RADIUS_FRAC: f32 = 0.01;
+    const SELECT_WIDTH: f32 = 2.0;
+    const OUTLINE_WIDTH: f32 = 2.0;
 
-    pub fn new(color_ref: &Color, show_hex: bool) -> Self {
+    pub fn new(color_ref: &Color, show_hex: bool, max_width: f32, max_height: f32, lerp: Lerp, rounding_legend: RoundingLegend) -> Self {
         let color = *color_ref;
+        let width = max_width.min(max_height * ShadeStrip::ASPECT_RATIO);
         ShadeStrip { 
             last_color: color,
             last_index: usize::MAX,
@@ -29,22 +53,26 @@ impl ShadeStrip {
             new_color: color,
             max_shade_count: 20,
             just_changed: false,
+            width,
+            height: width / ShadeStrip::ASPECT_RATIO,
+            lerp,
+            rounding_legend,
             show_hex
         }
     }
 
-    pub fn widget<'a>(&'a mut self, base_color: &'a mut Color, legend: &'a [[f32; 2]; 2], lerp: &'a Lerp) 
+    pub fn widget<'a>(&'a mut self, base_color: &'a mut Color) 
         -> impl Widget + 'a {
         move |ui: &mut Ui| -> egui::Response {
-            let radius = ShadeStrip::ROUND_RADIUS;
+            let radius = self.width * ShadeStrip::ROUND_RADIUS_FRAC;
             let rounding = Rounding {
-                nw: legend[0][0] * radius,
-                sw: legend[0][1] * radius,
-                ne: legend[1][0] * radius,
-                se: legend[1][1] * radius
+                nw: self.rounding_legend.nw * radius,
+                sw: self.rounding_legend.sw * radius,
+                ne: self.rounding_legend.ne * radius,
+                se: self.rounding_legend.se * radius
             };
 
-            let (id, rect) = ui.allocate_space(vec2(ShadeStrip::MIN_WIDTH, ShadeStrip::MIN_HEIGHT));
+            let (id, rect) = ui.allocate_space(vec2(self.width, self.height));
             let response = ui.interact(rect, id, Sense::union(Sense::hover(), Sense::click()));
             let painter = ui.painter();
 
@@ -56,7 +84,7 @@ impl ShadeStrip {
                 let (shades, index) = if self.last_color == *base_color && self.last_index != usize::MAX {
                     (&self.shades, self.last_index)
                 } else {
-                    let (shades, last_index) = shades(*base_color, self.max_shade_count, lerp);
+                    let (shades, last_index) = shades(*base_color, self.max_shade_count, &self.lerp);
                     self.last_index = last_index;
                     self.shades = shades.iter().map(|s| (*s, s.to_color32())).collect();
                     (&self.shades, self.last_index)
@@ -78,18 +106,20 @@ impl ShadeStrip {
 
                     painter.rect_filled(shade_rect, rounding, *shade_color32);
 
+                    let dot_radius = self.width * ShadeStrip::DOT_RADIUS_FRAC;
+
                     let is_inside = response.ctx.pointer_interact_pos()
                         .map_or(false, |pos| shade_rect.contains(pos));
                     if is_inside {
                         self.new_color = *shade; 
-                        painter.circle_stroke(shade_rect.center(), ShadeStrip::DOT_RADIUS, 
+                        painter.circle_stroke(shade_rect.center(), dot_radius, 
                                               Stroke{width: Self::SELECT_WIDTH,
                                                      color: shade.borw()
                                               });
                     }
 
                     if i == index {
-                        painter.circle_filled(shade_rect.center(), ShadeStrip::DOT_RADIUS, shade.borw());
+                        painter.circle_filled(shade_rect.center(), dot_radius , shade.borw());
                     }
                 }
             } 
@@ -121,7 +151,7 @@ impl ShadeStrip {
                 }
             }
             
-            painter.rect_stroke(rect, rounding, Stroke{width: 2f32, color: Color32::BLACK});
+            painter.rect_stroke(rect, rounding, Stroke{width: ShadeStrip::OUTLINE_WIDTH, color: base_color.borw()});
 
             response
         }
