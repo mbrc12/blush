@@ -9,7 +9,7 @@ use egui::{FontFamily, TextStyle, Ui, Layout, Align};
 use widgets::{ShadeStrip, ThreeStrip};
 
 pub struct Blush {
-    db: VPTree<f64, NamedColor>,
+    // db: VPTree<f64, NamedColor>,
     shown: bool,
     count: u32,
     font: egui::FontId,
@@ -22,11 +22,12 @@ pub struct Blush {
 
 impl Blush {
     pub fn new(_cc: &eframe::CreationContext) -> Result<Self, io::Error> {
-        let db = util::color::load_db(Path::new("res/colors.json"))?;
+        _cc.egui_ctx.set_pixels_per_point(1.0f32);
+        // let db = util::color::load_db(Path::new("res/colors.json"))?;
         let color = Color::from_hex("#ff355e");
         let color_2 = Color::from_hex("#dd5ac1");
         Ok(Blush { 
-            db,
+            // db,
             shown: false,  
             count: 0,
             font: egui::FontId::new(30.0, FontFamily::Monospace),
@@ -45,7 +46,7 @@ impl Blush {
 
 impl eframe::App for Blush {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let resp = egui::TopBottomPanel::top("colors").show(ctx, |ui| {
+        let _ = egui::TopBottomPanel::top("colors").show(ctx, |ui| {
             self.apply_styles(ui);
 
             self.count += 1;
@@ -56,11 +57,31 @@ impl eframe::App for Blush {
             if self.shown {
                 ui.label(format!("I am visible!, {}", self.count));
             }
-            
+
+            // ui.add(self.ss.widget(&mut self.base_color, &[[1.0, 1.0], [1.0, 1.0]], &hue_lerp(0.0, 1.0)));
+            // egui::ScrollArea::horizontal().show(ui, |ui| {
+            //     // self.three_strip.place(ui, &mut self.base_color);
+            //     // self.three_strip_2.place(ui, &mut self.base_color_2);
+            //     log::info!("{:?}", ui.available_size());
             ui.horizontal(|ui| {
-                self.three_strip.place(ui, &mut self.base_color);
-                self.three_strip_2.place(ui, &mut self.base_color_2);
+                for _ in 1..10 {
+                    self.three_strip.place(ui, &mut self.base_color);
+                }
             });
+            // });
+            
+            // egui::Grid::new("colors").show(ui, |ui| {
+            //     self.three_strip.place(ui, &mut self.base_color);
+            //     self.three_strip.place(ui, &mut self.base_color);
+            //     self.three_strip.place(ui, &mut self.base_color);
+            //     self.three_strip.place(ui, &mut self.base_color);
+            //     ui.end_row();
+
+            //     self.three_strip.place(ui, &mut self.base_color);
+            //     self.three_strip.place(ui, &mut self.base_color);
+
+            //     ui.end_row();
+            // });
         });
 
         // resp.response.on_hover_text("Hovered");

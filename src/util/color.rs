@@ -2,40 +2,41 @@
 
 use std::{path::Path, fs, io};
 
-use color_space::{Lch, Rgb};
 use egui::Color32;
+use palette::{FromColor, Srgb, Lch};
 
 use super::vptree::{VPTree, MetricPoint};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Color {
-    pub luminance: f64,
-    pub chroma: f64,
-    pub hue: f64
+    pub luminance: f32,
+    pub chroma: f32,
+    pub hue: f32
 }
 
 impl Color {
     pub fn from_hex(hex: &str) -> Self {
-        let Lch{l, c, h} = 
-            color_space::Rgb::from_hex(u32::from_str_radix(&hex[1..], 16).unwrap()).into();
+        let srgb =
+            Srgb::from(u32::from_str_radix(&hex[1..], 16).unwrap());
+        let srgb: Srgb<f32> = Srgb::from_format(srgb);
+
+        let lch = Lch::from_color(srgb);
+        let (l, c, h) = lch.into_components();
 
         Color {
-            hue: h/360.0,
+            hue: h.to_positive_degrees()/360.0,
             luminance: l/100.0,
-            chroma: c/100.0,
+            chroma: c/100.0
         }
     }
 
     pub fn to_hex(self) -> String {
         let Color { luminance, chroma, hue } = self;
-        let Rgb{r, g, b} =
-            color_space::Lch::new(luminance * 100., chroma * 100., hue * 360.).into();
+        let lch = Lch::from_components((luminance * 100.0, chroma * 100.0, hue * 360.0));
+        let srgb: Srgb<u8> = Srgb::from_color(lch).into_format();
+        let (r, g, b) = srgb.into_components();
 
-        let r = r.round() as u32;
-        let g = g.round() as u32;
-        let b = b.round() as u32;
-        let hex = r * 256 * 256 + g * 256 + b; 
-
+        let hex = (r as u32) * 256 * 256 + (g as u32) * 256 + (b as u32); 
         let mut s = format!("{:06x}", hex);
         s.insert(0, '#');
         s
@@ -43,17 +44,15 @@ impl Color {
 
     pub fn to_color32(self) -> Color32 {
         let Color { luminance, chroma, hue } = self;
-        let Rgb{r, g, b} =
-            color_space::Lch::new(luminance * 100., chroma * 100., hue * 360.).into();
-
-        let r = r.round() as u8;
-        let g = g.round() as u8;
-        let b = b.round() as u8;
+        
+        let lch = Lch::from_components((luminance * 100.0, chroma * 100.0, hue * 360.0));
+        let srgb = Srgb::from_color(lch).into_format();
+        let (r, g, b) = srgb.into_components();
 
         Color32::from_rgb(r, g, b)
     }
 
-    pub fn rotate(self, amount: f64) -> Color {
+    pub fn rotate(self, amount: f32) -> Color {
         Color{ luminance: self.luminance, chroma: self.chroma, hue: (self.hue + amount + 1.0) % 1.0 }
     }
 
@@ -79,7 +78,7 @@ fn test_inverse_color() {
 /* Bad implementation for color distance, ideally one should convert to Luv and then compute
  * distances */
 impl MetricPoint for Color {
-    type Dist = f64;
+    type Dist = f32;
 
     fn dist(from: &Self, to: &Self) -> Self::Dist {
         let Color{luminance: l1, chroma: c1, hue: h1} = from;
@@ -90,21 +89,21 @@ impl MetricPoint for Color {
     }
 }
 
-pub fn luminance_lerp(start: f64, end: f64) -> Lerp {
+pub fn luminance_lerp(start: f32, end: f32) -> Lerp {
     Lerp{
         lerp: Box::new(move |color: Color, t| Color{luminance: start + (end - start) * t, ..color}),
         position: Box::new(move |color: Color| (color.luminance - start)/(end - start))
     }
 }
 
-pub fn chroma_lerp(start: f64, end: f64) -> Lerp {
+pub fn chroma_lerp(start: f32, end: f32) -> Lerp {
     Lerp{
         lerp: Box::new(move |color: Color, t| Color{chroma: start + (end - start) * t, ..color}),
         position: Box::new(move |color: Color| (color.chroma - start)/(end - start))
     }
 }
 
-pub fn hue_lerp(start: f64, end: f64) -> Lerp {
+pub fn hue_lerp(start: f32, end: f32) -> Lerp {
     Lerp{
         lerp: Box::new(move |color: Color, t| Color{hue: start + (end - start) * t, ..color}),
         position: Box::new(move |color: Color| (color.hue - start)/(end - start))
@@ -114,12 +113,12 @@ pub fn hue_lerp(start: f64, end: f64) -> Lerp {
 
 // list of shades, and position of current shade in that list
 pub fn shades(base_color: Color, max_shades: usize, lerp: &Lerp) -> (Vec<Color>, usize) {
-    let width = 1.0 / max_shades as f64;
+    let width = 1.0 / max_shades as f32;
     let index = ((lerp.position)(base_color) / width).floor() as usize;
     let modulus = (lerp.position)(base_color) % width;
 
     ((0 .. max_shades)
-        .map(|x| width * (x as f64) + modulus)
+        .map(|x| width * (x as f32) + modulus)
         .map(|t| (lerp.lerp)(base_color, t))
         .collect(), index)
 }
@@ -143,7 +142,7 @@ impl NamedColor {
 }
 
 impl MetricPoint for NamedColor {
-    type Dist = f64;
+    type Dist = f32;
 
     fn dist(from: &Self, to: &Self) -> Self::Dist {
         MetricPoint::dist(&from.color, &to.color)
@@ -156,10 +155,10 @@ impl PartialEq for NamedColor {
     }
 }
 
-pub type ColorDB = VPTree<f64, NamedColor>;
+pub type ColorDB = VPTree<f32, NamedColor>;
 pub struct Lerp {
-    pub lerp: Box<dyn Fn(Color, f64) -> Color>,
-    pub position: Box<dyn Fn(Color) -> f64>,
+    pub lerp: Box<dyn Fn(Color, f32) -> Color>,
+    pub position: Box<dyn Fn(Color) -> f32>,
 }
 
 pub fn load_db(path: &Path) -> Result<ColorDB, io::Error> {
@@ -191,7 +190,7 @@ pub fn quantize_color(db: &ColorDB, color: Color) -> &NamedColor {
 
 // pub fn shades_quantized(db: &ColorDB, base_color: Color, max_shades: usize, lerp: Lerp) -> Vec<&NamedColor> {
 //     let mut shades = (0 .. max_shades)
-//         .map(|x| (x as f64) / (max_shades as f64))
+//         .map(|x| (x as f32) / (max_shades as f32))
 //         .map(|t| quantize_color(db, lerp(base_color, t)))
 //         .collect::<Vec<&NamedColor>>();
 

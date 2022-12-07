@@ -2,6 +2,10 @@ use egui::{Color32, Rounding, Ui, vec2, Sense, Widget, pos2, Stroke, Rect, FontI
 use crate::util::color::{Color, ColorDB, shades, Lerp};
 
 pub struct ShadeStrip {
+    last_color: Color,
+    last_index: usize,
+    shades: Vec<(Color, Color32)>,
+
     new_color: Color,
     max_shade_count: usize,
     just_changed: bool,
@@ -18,17 +22,22 @@ impl ShadeStrip {
     pub fn new(color_ref: &Color, show_hex: bool) -> Self {
         let color = *color_ref;
         ShadeStrip { 
+            last_color: color,
+            last_index: usize::MAX,
+            shades: vec![],
+
             new_color: color,
-            max_shade_count: 10,
+            max_shade_count: 20,
             just_changed: false,
             show_hex
         }
     }
 
-    pub fn widget<'a>(&'a mut self, base_color: &'a mut Color, legend: &'a [[f32; 2]; 2], lerp: &'a Lerp) -> impl Widget + 'a {
+    pub fn widget<'a>(&'a mut self, base_color: &'a mut Color, legend: &'a [[f32; 2]; 2], lerp: &'a Lerp) 
+        -> impl Widget + 'a {
         move |ui: &mut Ui| -> egui::Response {
             let radius = ShadeStrip::ROUND_RADIUS;
-            let rounding = Rounding{
+            let rounding = Rounding {
                 nw: legend[0][0] * radius,
                 sw: legend[0][1] * radius,
                 ne: legend[1][0] * radius,
@@ -44,11 +53,18 @@ impl ShadeStrip {
 
             if response.hovered() && !self.just_changed {
 
-                let (shades, index) = shades(*base_color, self.max_shade_count, lerp);
+                let (shades, index) = if self.last_color == *base_color && self.last_index != usize::MAX {
+                    (&self.shades, self.last_index)
+                } else {
+                    let (shades, last_index) = shades(*base_color, self.max_shade_count, lerp);
+                    self.last_index = last_index;
+                    self.shades = shades.iter().map(|s| (*s, s.to_color32())).collect();
+                    (&self.shades, self.last_index)
+                };
+
                 let each_width = rect.width()/(shades.len() as f32);
 
-                for (i, shade) in shades.iter().enumerate() {
-                    let shade_color32 = shade.to_color32();
+                for (i, (shade, shade_color32)) in shades.iter().enumerate() {
                     let shade_rect_x = rect.left() + each_width * (i as f32);
                     let shade_rect = Rect::from_min_size(pos2(shade_rect_x, rect.top()), vec2(each_width, rect.height()));
 
@@ -60,7 +76,7 @@ impl ShadeStrip {
                         Rounding::default()
                     };
 
-                    painter.rect_filled(shade_rect, rounding, shade_color32);
+                    painter.rect_filled(shade_rect, rounding, *shade_color32);
 
                     let is_inside = response.ctx.pointer_interact_pos()
                         .map_or(false, |pos| shade_rect.contains(pos));
@@ -88,7 +104,6 @@ impl ShadeStrip {
 
                 normal_draw = true;
             }
-
 
             if !response.hovered() || self.just_changed {
                 normal_draw = true;
