@@ -36,7 +36,6 @@ pub struct ShadeStrip {
 
     new_color: Color,
     max_shade_count: usize,
-    just_changed: bool,
     lerp: Lerp,
     rounding_legend: RoundingLegend,
     show_hex: bool,
@@ -59,7 +58,6 @@ impl ShadeStrip {
 
             new_color: color,
             max_shade_count: 10,
-            just_changed: false,
             lerp,
             rounding_legend,
             show_hex
@@ -83,7 +81,7 @@ impl ShadeStrip {
             self.new_color = base_color;
             let mut normal_draw = false;
 
-            if !disabled && response.hovered() && !self.just_changed {
+            if !disabled && response.hovered() {
 
                 let (shades, index) = if self.last_color == base_color && self.last_index != usize::MAX {
                     (&self.shades, self.last_index)
@@ -128,18 +126,11 @@ impl ShadeStrip {
                 }
             } 
 
-            if !disabled && !response.hovered() {
-                self.just_changed = false;
-            }
-
             if !disabled && response.clicked() { // Color got selected
                 chan.push(Message::ChangeColor {to: self.new_color});
-                self.just_changed = true;
-
-                normal_draw = true;
             }
 
-            if !response.hovered() || self.just_changed || disabled {
+            if !response.hovered() || disabled {
                 normal_draw = true;
             }
 

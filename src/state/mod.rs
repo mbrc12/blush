@@ -40,7 +40,7 @@ impl State {
         match msg {
             NoOp => (),
             
-            // From three strip ////////// 
+            // From three-strip ////////// 
 
             ChangeColor { to } => {
                 if self.color_choose_state {
@@ -49,7 +49,7 @@ impl State {
                 }
             }
         
-            // From color map ///////////
+            // From color-map ///////////
             
             AddColor { loc } => {
                 self.color_map.add_color(loc);
