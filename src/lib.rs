@@ -47,15 +47,6 @@ impl eframe::App for Blush {
         let _ = egui::TopBottomPanel::top("colors").show(ctx, |ui| {
             self.apply_styles(ui);
 
-            // self.count += 1;
-
-            // if ui.button("Hello").clicked() {
-            //     self.shown = !self.shown;
-            // }
-            // if self.shown {
-            //     ui.label(format!("I am visible!, {}", self.count));
-            // }
-    
             // let num = 5;
             // let max_width = ui.max_rect().width();
             // let each_width = max_width / (num as f32) - ui.spacing().item_spacing.x * (1.0 - 1.0/(num as f32));
@@ -70,9 +61,28 @@ impl eframe::App for Blush {
             //         self.three_strip.place(ui, self.state.base_color(), &mut self.chan, each_width, INFINITY);
             //     }
             // });
-            
-            ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 500.0, 500.0));
-            self.three_strip.place(ui, self.state.base_color(), &mut self.chan, 500.0, 500.0, !self.state.color_choose_state);
+           
+            egui::TopBottomPanel::top("color_pickers").show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    let response = ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 300.0, 300.0));
+                    let colorpicker_id = ui.make_persistent_id("color-picker");
+                    
+                    if self.state.color_choose_state {
+                        ui.memory().open_popup(colorpicker_id);
+                    } else if ui.memory().is_popup_open(colorpicker_id){
+                        ui.memory().close_popup();
+                    }
+
+                    egui::popup::popup_below_widget(ui, colorpicker_id,
+                                                    &response, |ui| {
+                                ui.vertical(|ui| {
+                                    ui.label("Choose color:");
+                                    self.three_strip.place(ui, self.state.base_color(), 
+                                                           &mut self.chan, 300.0, 300.0, !self.state.color_choose_state);
+                                });
+                        });
+                })
+            });
 
             self.state.process_chan(&mut self.chan)
             // });

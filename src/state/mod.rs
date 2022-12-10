@@ -3,6 +3,7 @@ use std::{collections::HashMap};
 use crate::util::{color::Color, buffer::Buffer};
 
 mod map_data;
+use egui::Pos2;
 pub use map_data::MapData;
 pub use map_data::Location;
 
@@ -13,16 +14,20 @@ pub struct State {
     base_color: Color,
     color_map: map_data::MapData,
     pub color_choose_state: bool,
+    pub color_choose_at: Pos2,
     choose_loc: Location,
 }
 
 #[derive(Default, Clone, Copy, Debug)]
 pub enum Message {
     #[default] NoOp,
+
     ChangeColor { to: Color },
-    AddColor { loc: (usize, usize) },
-    UpdateColor { loc: (usize, usize) },
-    DeleteColor { loc: (usize, usize) }
+    Distracted,
+
+    AddColor { loc: (usize, usize), pos: Pos2 },
+    UpdateColor { loc: (usize, usize), pos: Pos2 },
+    DeleteColor { loc: (usize, usize) },
 }
 
 impl State {
@@ -48,17 +53,21 @@ impl State {
                     self.base_color = to;
                 }
             }
+
+            Distracted => {
+                self.color_choose_state = false;
+            }
         
             // From color-map ///////////
             
-            AddColor { loc } => {
+            AddColor { loc, pos } => {
                 self.color_map.add_color(loc);
                 self.base_color = self.color_map.color_at(loc).unwrap();
                 self.color_choose_state = true;
                 self.choose_loc = loc;
             }
             
-            UpdateColor { loc } => {
+            UpdateColor { loc, pos } => {
                 self.base_color = self.color_map.color_at(loc).unwrap();
                 self.color_choose_state = true;
                 self.choose_loc = loc;
@@ -68,6 +77,7 @@ impl State {
                 self.color_map.delete_color(loc);
                 self.color_choose_state = false;
             }
+
         }
     }
 

@@ -16,7 +16,7 @@ pub struct Color {
 
 impl Default for Color {
     fn default() -> Self {
-        Self { luminance: 0.6, chroma: 0.2, hue: 0.5 }
+        Self { luminance: 0.6, chroma: 0.7, hue: 0.5 }
     }
 }
 

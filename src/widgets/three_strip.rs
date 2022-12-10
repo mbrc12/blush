@@ -1,11 +1,12 @@
 use egui::{Ui, InnerResponse};
 
-use crate::{util::color::{Color, hue_lerp, chroma_lerp, luminance_lerp}, state::Chan};
+use crate::{util::color::{Color, hue_lerp, chroma_lerp, luminance_lerp}, state::{Chan, Message}};
 
 use super::{ShadeStrip, shade_strip::RoundingLegend};
 
 pub struct ThreeStrip {
     axis: [ShadeStrip; 3],
+    entered: bool,
 }
 
 
@@ -25,19 +26,30 @@ impl ThreeStrip {
                                 ThreeStrip::ROUNDING_LEGEND[1]),
                 ShadeStrip::new(color, false, chroma_lerp(0.0, 1.0), 
                                 ThreeStrip::ROUNDING_LEGEND[2])
-            ]
-                   
+            ],
+            entered: false       
         }
     }
     
     pub fn place(&mut self, ui: &mut Ui, color: Color, chan: &mut Chan, 
                  max_width: f32, max_height: f32, disabled: bool) -> InnerResponse<()> {
-        ui.vertical(|ui| {
+        let resp = ui.vertical(|ui| {
             for i in 0..3 {
                 ui.add(self.axis[i].construct(color, chan, max_width, max_height/3.0, disabled));
                 ui.add_space(-Self::GAP_REMOVE)
             }
-        })
+        });
+
+        if resp.response.hovered() {
+            self.entered = true;
+        }
+
+        if !resp.response.hovered() && self.entered {
+            chan.push(Message::Distracted);
+            self.entered = false;
+        }
+        
+        resp
     }
 }   
 

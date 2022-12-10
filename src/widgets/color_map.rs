@@ -1,35 +1,8 @@
 use std::f32::INFINITY;
 
-use eframe::glow::LUMINANCE;
 use egui::{Widget, Ui, Rounding, Sense, vec2, Rect, pos2, Color32, Pos2};
 
-use crate::{state::{Chan, Message, MapData, Location}, util::color::Color};
-
-struct RoundedRect {
-    rect: Rect, 
-    rounding: Rounding
-}
-
-impl RoundedRect {
-    fn split_ver_flat(&self) -> (RoundedRect, RoundedRect) {
-        let RoundedRect { rect, rounding } = self;
-        let each_size = vec2(rect.width(), rect.height()/2.0);
-        let rect_1 = Rect::from_min_size(rect.left_top(), each_size);
-        let top_2 = rect.top() + rect.height()/2.0;
-        let rect_2 = Rect::from_min_size(pos2(rect.left(), top_2), each_size);
-
-        let rnd_1 = Rounding{sw: 0.0, se: 0.0, ..*rounding};
-        let rnd_2 = Rounding{nw: 0.0, ne: 0.0, ..*rounding};
-
-        ((rect_1, rnd_1).into(), (rect_2, rnd_2).into())
-    }
-}
-
-impl From<(Rect, Rounding)> for RoundedRect {
-    fn from(rr: (Rect, Rounding)) -> Self {
-        RoundedRect { rect: rr.0, rounding: rr.1 }
-    }
-}
+use crate::{state::{Chan, Message, MapData, Location}, util::{color::Color, RoundedRect}};
 
 pub struct ColorMap {}
 
@@ -113,7 +86,7 @@ fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, loc: Locat
     if top_rr.rect.contains(mouse) {
         painter.rect_filled(top_rr.rect, top_rr.rounding, button_color.to_color32());
         if click {
-            chan.push(Message::UpdateColor { loc });
+            chan.push(Message::UpdateColor { loc, pos: mouse });
         }
     } else if bot_rr.rect.contains(mouse) {
         painter.rect_filled(bot_rr.rect, bot_rr.rounding, button_color.to_color32());
@@ -127,19 +100,31 @@ fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, loc: Locat
     }
 }
 
-const INVALID_COLOR_DARK: Color32 = Color32::from_rgb(55, 55, 55);
-const INVALID_COLOR_LIGHT: Color32 = Color32::from_rgb(85, 85, 85);
+const INVALID_COLOR_DARK: Color = Color{hue: 0.0, luminance: 0.3, chroma: 0.0};
+const INVALID_COLOR_LIGHT: Color = Color{hue: 0.0, luminance: 0.4, chroma: 0.0};
+const TESSELATE_LEVEL: usize = 8;
 
 fn invalid_cell(painter: &egui::Painter, rr: RoundedRect, loc: Location, 
                 map: &MapData, chan: &mut Chan, mouse: Pos2, click: bool) {
     let RoundedRect{ rect, rounding } = rr;
 
     if rect.contains(mouse) {
-        painter.rect_filled(rect, rounding, INVALID_COLOR_LIGHT);
+        tesselate(painter, rr, TESSELATE_LEVEL, vec![INVALID_COLOR_LIGHT, INVALID_COLOR_DARK]);
+        // painter.rect_filled(rect, rounding, INVALID_COLOR_LIGHT);
         if click {
-            chan.push(Message::AddColor { loc });
+            chan.push(Message::AddColor { loc, pos: mouse });
         }
     } else {
-        painter.rect_filled(rect, rounding, INVALID_COLOR_DARK);
+        tesselate(painter, rr, TESSELATE_LEVEL * 2usize, vec![INVALID_COLOR_DARK, INVALID_COLOR_LIGHT]
+                  .iter()
+                  .map(|c| button_color(*c))
+                  .collect());
+    }
+}
+
+fn tesselate(painter: &egui::Painter, domain: RoundedRect, n: usize, cols: Vec<Color>) {
+    let rrs = domain.split(n, n);
+    for (index, rr) in rrs.into_iter().enumerate() {
+        painter.rect_filled(rr.rect, rr.rounding, cols[(index + index / n) % cols.len()].to_color32());
     }
 }
