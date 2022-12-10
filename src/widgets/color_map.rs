@@ -65,7 +65,7 @@ impl ColorMap {
 }
 
 
-fn button_color(color: Color) -> Color {
+fn select_color(color: Color) -> Color {
     let mut lum = color.luminance;
     if lum > 0.5 {
         lum -= 0.1;
@@ -80,7 +80,7 @@ fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, loc: Locat
     let RoundedRect{ rect, rounding } = rr;
     painter.rect_filled(rect, rounding, color.to_color32());
 
-    let button_color = button_color(color);
+    let button_color = select_color(color);
 
     let (top_rr, bot_rr) = rr.split_ver_flat();
     if top_rr.rect.contains(mouse) {
@@ -109,22 +109,22 @@ fn invalid_cell(painter: &egui::Painter, rr: RoundedRect, loc: Location,
     let RoundedRect{ rect, rounding } = rr;
 
     if rect.contains(mouse) {
-        tesselate(painter, rr, TESSELATE_LEVEL, vec![INVALID_COLOR_LIGHT, INVALID_COLOR_DARK]);
+        tesselate(painter, rr, TESSELATE_LEVEL, 
+                  [INVALID_COLOR_LIGHT, INVALID_COLOR_DARK]);
         // painter.rect_filled(rect, rounding, INVALID_COLOR_LIGHT);
         if click {
             chan.push(Message::AddColor { loc, pos: mouse });
         }
     } else {
-        tesselate(painter, rr, TESSELATE_LEVEL * 2usize, vec![INVALID_COLOR_DARK, INVALID_COLOR_LIGHT]
-                  .iter()
-                  .map(|c| button_color(*c))
-                  .collect());
+        tesselate(painter, rr, TESSELATE_LEVEL * 2usize, 
+                  [select_color(INVALID_COLOR_DARK), select_color(INVALID_COLOR_LIGHT)]);
     }
 }
 
-fn tesselate(painter: &egui::Painter, domain: RoundedRect, n: usize, cols: Vec<Color>) {
+// tesselate a domain with C colors
+fn tesselate<const C: usize>(painter: &egui::Painter, domain: RoundedRect, n: usize, cols: [Color; C]) {
     let rrs = domain.split(n, n);
     for (index, rr) in rrs.into_iter().enumerate() {
-        painter.rect_filled(rr.rect, rr.rounding, cols[(index + index / n) % cols.len()].to_color32());
+        painter.rect_filled(rr.rect, rr.rounding, cols[(index + index / n) % C].to_color32());
     }
 }
