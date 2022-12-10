@@ -4,4 +4,5 @@ mod color_map;
 
 pub use shade_strip::ShadeStrip;
 pub use three_strip::ThreeStrip;
+pub use color_map::ColorMap;
 

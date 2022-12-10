@@ -66,9 +66,8 @@ impl ShadeStrip {
         }
     }
 
-    pub fn widget<'a>(&'a mut self, base_color: Color, chan: &'a mut Chan, max_width: f32, max_height: f32) 
-
-        -> impl Widget + 'a {
+    pub fn construct<'a>(&'a mut self, base_color: Color, chan: &'a mut Chan, 
+                         max_width: f32, max_height: f32) -> impl Widget + 'a {
         move |ui: &mut Ui| -> egui::Response {
 
             let width = max_width.min(max_height * ShadeStrip::ASPECT_RATIO);

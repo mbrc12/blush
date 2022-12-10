@@ -9,7 +9,7 @@ use util::{color::{Color}};
 
 use egui::{FontFamily, TextStyle, Ui, Layout, Align};
 
-use widgets::{ShadeStrip, ThreeStrip};
+use widgets::{ShadeStrip, ThreeStrip, ColorMap};
 
 pub struct Blush {
     // db: VPTree<f64, NamedColor>,
@@ -17,6 +17,7 @@ pub struct Blush {
     state: State,
     chan: Chan,
     three_strip: ThreeStrip,
+    color_map: ColorMap,
 }
 
 impl Blush {
@@ -31,6 +32,7 @@ impl Blush {
             state: State::default(),
             chan: Chan::default(),
             three_strip: ThreeStrip::new(&color),
+            color_map: ColorMap::new(),
         })
     }
 
@@ -54,20 +56,22 @@ impl eframe::App for Blush {
             //     ui.label(format!("I am visible!, {}", self.count));
             // }
     
-            let num = 5;
-            let max_width = ui.max_rect().width();
-            let each_width = max_width / (num as f32) - ui.spacing().item_spacing.x * (1.0 - 1.0/(num as f32));
+            // let num = 5;
+            // let max_width = ui.max_rect().width();
+            // let each_width = max_width / (num as f32) - ui.spacing().item_spacing.x * (1.0 - 1.0/(num as f32));
 
-            // ui.add(self.ss.widget(&mut self.base_color, &[[1.0, 1.0], [1.0, 1.0]], &hue_lerp(0.0, 1.0)));
-            // egui::ScrollArea::horizontal().show(ui, |ui| {
-            //     // self.three_strip.place(ui, &mut self.base_color);
-            //     // self.three_strip_2.place(ui, &mut self.base_color_2);
-            //     log::info!("{:?}", ui.available_size());
-            ui.horizontal(|ui| {
-                for _ in 1..=num {
-                    self.three_strip.place(ui, self.state.base_color(), &mut self.chan, each_width, INFINITY);
-                }
-            });
+            // // ui.add(self.ss.widget(&mut self.base_color, &[[1.0, 1.0], [1.0, 1.0]], &hue_lerp(0.0, 1.0)));
+            // // egui::ScrollArea::horizontal().show(ui, |ui| {
+            // //     // self.three_strip.place(ui, &mut self.base_color);
+            // //     // self.three_strip_2.place(ui, &mut self.base_color_2);
+            // //     log::info!("{:?}", ui.available_size());
+            // ui.horizontal(|ui| {
+            //     for _ in 1..=num {
+            //         self.three_strip.place(ui, self.state.base_color(), &mut self.chan, each_width, INFINITY);
+            //     }
+            // });
+            
+            ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 500.0, 500.0));
 
             self.state.process_chan(&mut self.chan)
             // });

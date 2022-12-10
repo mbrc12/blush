@@ -20,10 +20,9 @@ impl<T: Default + Clone> Buffer<T> {
     }
 
     pub fn push(&mut self, item: T) {
-        let tail = self.tail + 1;
-        assert!(tail < BUFFER_CAPACITY);
-        self.data[tail as usize] = item;
-        self.tail = tail;
+        assert!(self.tail < BUFFER_CAPACITY);
+        self.data[self.tail] = item;
+        self.tail += 1;
     }
 
     fn clear(&mut self) {
@@ -38,7 +37,7 @@ impl<T: Default + Clone> Buffer<T> {
 impl<T: Default + Clone> From<&mut Buffer<T>> for Vec<T> {
     fn from(buf: &mut Buffer<T>) -> Self {
         let mut vec = vec![];
-        for idx in 0..=buf.tail {
+        for idx in 0 .. buf.tail {
             vec.push(buf.data[idx].clone());
         }
         buf.clear();

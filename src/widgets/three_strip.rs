@@ -33,7 +33,7 @@ impl ThreeStrip {
     pub fn place(&mut self, ui: &mut Ui, color: Color, chan: &mut Chan, max_width: f32, max_height: f32) -> InnerResponse<()> {
         ui.vertical(|ui| {
             for i in 0..3 {
-                ui.add(self.axis[i].widget(color, chan, max_width, max_height/3.0));
+                ui.add(self.axis[i].construct(color, chan, max_width, max_height/3.0));
                 ui.add_space(-Self::GAP_REMOVE)
             }
         })
