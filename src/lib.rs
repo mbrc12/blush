@@ -2,10 +2,10 @@ mod widgets;
 pub mod util;
 mod state;
 
-use std::{path::Path, io, f32::INFINITY};
+use std::{path::Path, io};
 
 use state::{State, Chan};
-use util::{color::{Color}};
+use util::color::Color;
 
 use egui::{FontFamily, TextStyle, Ui, Layout, Align};
 
@@ -72,6 +72,7 @@ impl eframe::App for Blush {
             // });
             
             ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 500.0, 500.0));
+            self.three_strip.place(ui, self.state.base_color(), &mut self.chan, 500.0, 500.0, !self.state.color_choose_state);
 
             self.state.process_chan(&mut self.chan)
             // });

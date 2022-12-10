@@ -67,7 +67,7 @@ impl ShadeStrip {
     }
 
     pub fn construct<'a>(&'a mut self, base_color: Color, chan: &'a mut Chan, 
-                         max_width: f32, max_height: f32) -> impl Widget + 'a {
+                         max_width: f32, max_height: f32, disabled: bool) -> impl Widget + 'a {
         move |ui: &mut Ui| -> egui::Response {
 
             let width = max_width.min(max_height * ShadeStrip::ASPECT_RATIO);
@@ -83,7 +83,7 @@ impl ShadeStrip {
             self.new_color = base_color;
             let mut normal_draw = false;
 
-            if response.hovered() && !self.just_changed {
+            if !disabled && response.hovered() && !self.just_changed {
 
                 let (shades, index) = if self.last_color == base_color && self.last_index != usize::MAX {
                     (&self.shades, self.last_index)
@@ -128,23 +128,29 @@ impl ShadeStrip {
                 }
             } 
 
-            if !response.hovered() {
+            if !disabled && !response.hovered() {
                 self.just_changed = false;
             }
 
-            if response.is_pointer_button_down_on() { // Color got selected
+            if !disabled && response.clicked() { // Color got selected
                 chan.push(Message::ChangeColor {to: self.new_color});
                 self.just_changed = true;
 
                 normal_draw = true;
             }
 
-            if !response.hovered() || self.just_changed {
+            if !response.hovered() || self.just_changed || disabled {
                 normal_draw = true;
             }
 
             if normal_draw {
-                painter.rect_filled(rect, rounding, base_color.to_color32());
+                let draw_color = if disabled {
+                    Color {chroma: 0.05, ..base_color}
+                } else {
+                    base_color
+                };
+
+                painter.rect_filled(rect, rounding, draw_color.to_color32());
 
                 if self.show_hex {
                     let font = FontId::monospace(rect.height() * 0.75f32);

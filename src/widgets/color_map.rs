@@ -76,9 +76,11 @@ impl ColorMap {
                     let cell_rect = Rect::from_min_size(pos2(cell_left, cell_top), vec2(each_width, each_height));
 
                     if let Some(cc) = cell_color {
-                        valid_cell(painter, (cell_rect, rounding).into(), cc, (r, c), chan, mouse, click);
+                        valid_cell(painter, (cell_rect, rounding).into(), cc, (r, c), 
+                                   map, chan, mouse, click);
                     } else {
-                        invalid_cell(painter, (cell_rect, rounding).into(), (r, c), chan, mouse, click); 
+                        invalid_cell(painter, (cell_rect, rounding).into(), (r, c), 
+                                     map, chan, mouse, click); 
                     }
                 }
             }
@@ -100,8 +102,8 @@ fn button_color(color: Color) -> Color {
     Color{luminance: lum, ..color}
 }
 
-fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, 
-              loc: Location, chan: &mut Chan, mouse: Pos2, click: bool) {
+fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, loc: Location, 
+              map: &MapData, chan: &mut Chan, mouse: Pos2, click: bool) {
     let RoundedRect{ rect, rounding } = rr;
     painter.rect_filled(rect, rounding, color.to_color32());
 
@@ -118,14 +120,18 @@ fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color,
         if click {
             chan.push(Message::DeleteColor { loc });
         }
+    } else {
+        // TODO: Display name /////////////
+        // let name = map.index_at(loc).unwrap();
+        // let len = name.len();
     }
 }
 
 const INVALID_COLOR_DARK: Color32 = Color32::from_rgb(55, 55, 55);
 const INVALID_COLOR_LIGHT: Color32 = Color32::from_rgb(85, 85, 85);
 
-fn invalid_cell(painter: &egui::Painter, rr: RoundedRect, 
-                loc: Location, chan: &mut Chan, mouse: Pos2, click: bool) {
+fn invalid_cell(painter: &egui::Painter, rr: RoundedRect, loc: Location, 
+                map: &MapData, chan: &mut Chan, mouse: Pos2, click: bool) {
     let RoundedRect{ rect, rounding } = rr;
 
     if rect.contains(mouse) {

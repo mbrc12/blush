@@ -12,7 +12,7 @@ pub type Chan = Buffer<Message>;
 pub struct State {
     base_color: Color,
     color_map: map_data::MapData,
-    color_choose_state: bool,
+    pub color_choose_state: bool,
     choose_loc: Location,
 }
 
@@ -45,19 +45,29 @@ impl State {
             ChangeColor { to } => {
                 if self.color_choose_state {
                     self.color_map.update_color(self.choose_loc, to);
+                    self.base_color = to;
                 }
             }
         
             // From color map ///////////
             
-            AddColor { loc } => self.color_map.add_color(loc),
+            AddColor { loc } => {
+                self.color_map.add_color(loc);
+                self.base_color = self.color_map.color_at(loc).unwrap();
+                self.color_choose_state = true;
+                self.choose_loc = loc;
+            }
             
             UpdateColor { loc } => {
+                self.base_color = self.color_map.color_at(loc).unwrap();
                 self.color_choose_state = true;
                 self.choose_loc = loc;
             }
 
-            DeleteColor { loc } => self.color_map.delete_color(loc)
+            DeleteColor { loc } => {
+                self.color_map.delete_color(loc);
+                self.color_choose_state = false;
+            }
         }
     }
 

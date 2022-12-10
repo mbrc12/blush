@@ -3,6 +3,12 @@ use std::collections::HashMap;
 use crate::util::color::Color;
 
 pub type Index = usize;
+pub type IndexRepr = String;
+
+fn to_repr(idx: Index) -> String {
+    format!("{:x}", idx)
+}
+
 pub type Location = (usize, usize);
 
 pub struct MapData {
@@ -36,6 +42,10 @@ impl Default for MapData {
 impl MapData {
     pub fn size(&self) -> (usize, usize) {
         (self.rows, self.cols)
+    }
+
+    pub fn index_at(&self, loc: Location) -> Option<IndexRepr> {
+        self.map.get(&loc).map(|x| to_repr(*x))
     }
 
     pub fn color_at(&self, loc: Location) -> Option<Color> {
