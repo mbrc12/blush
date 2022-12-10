@@ -1,6 +1,6 @@
 use egui::{Ui, InnerResponse};
 
-use crate::util::color::{Color, hue_lerp, chroma_lerp, luminance_lerp};
+use crate::{util::color::{Color, hue_lerp, chroma_lerp, luminance_lerp}, state::Chan};
 
 use super::{ShadeStrip, shade_strip::RoundingLegend};
 
@@ -16,25 +16,24 @@ impl ThreeStrip {
 
     const GAP_REMOVE: f32 = 3f32;
 
-    pub fn new(color: &Color, max_width: f32, max_height: f32) -> Self {
+    pub fn new(color: &Color) -> Self {
         ThreeStrip{
             axis: [
-                ShadeStrip::new(color, false, max_width, max_height/3.0, hue_lerp(0.0, 1.0), 
+                ShadeStrip::new(color, false, hue_lerp(0.0, 1.0), 
                                 ThreeStrip::ROUNDING_LEGEND[0]),
-                ShadeStrip::new(color, true, max_width, max_height/3.0, luminance_lerp(0.0, 1.0), 
+                ShadeStrip::new(color, true, luminance_lerp(0.0, 1.0), 
                                 ThreeStrip::ROUNDING_LEGEND[1]),
-                ShadeStrip::new(color, false, max_width, max_height/3.0, chroma_lerp(0.0, 1.0), 
+                ShadeStrip::new(color, false, chroma_lerp(0.0, 1.0), 
                                 ThreeStrip::ROUNDING_LEGEND[2])
             ]
                    
         }
     }
     
-    pub fn place(&mut self, ui: &mut Ui, color: &mut Color) -> InnerResponse<()> {
-        let lerps = [hue_lerp(0.0, 1.0), luminance_lerp(0.0, 1.0), chroma_lerp(0.0, 1.0)];
+    pub fn place(&mut self, ui: &mut Ui, color: Color, chan: &mut Chan, max_width: f32, max_height: f32) -> InnerResponse<()> {
         ui.vertical(|ui| {
             for i in 0..3 {
-                ui.add(self.axis[i].widget(color));
+                ui.add(self.axis[i].widget(color, chan, max_width, max_height/3.0));
                 ui.add_space(-Self::GAP_REMOVE)
             }
         })

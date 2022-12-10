@@ -14,6 +14,12 @@ pub struct Color {
     pub hue: f32
 }
 
+impl Default for Color {
+    fn default() -> Self {
+        Self { luminance: 0.6, chroma: 0.2, hue: 0.5 }
+    }
+}
+
 impl Color {
     pub fn from_hex(hex: &str) -> Self {
         let srgb =

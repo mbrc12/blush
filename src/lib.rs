@@ -1,8 +1,11 @@
 mod widgets;
 pub mod util;
-use std::{path::Path, io};
+mod state;
 
-use util::{color::{Color, NamedColor, hue_lerp, luminance_lerp, chroma_lerp}, vptree::VPTree};
+use std::{path::Path, io, f32::INFINITY};
+
+use state::{State, Chan};
+use util::{color::{Color}};
 
 use egui::{FontFamily, TextStyle, Ui, Layout, Align};
 
@@ -10,14 +13,10 @@ use widgets::{ShadeStrip, ThreeStrip};
 
 pub struct Blush {
     // db: VPTree<f64, NamedColor>,
-    shown: bool,
-    count: u32,
     font: egui::FontId,
-
-    base_color: Color,
-    base_color_2: Color,
+    state: State,
+    chan: Chan,
     three_strip: ThreeStrip,
-    three_strip_2: ThreeStrip,
 }
 
 impl Blush {
@@ -28,13 +27,10 @@ impl Blush {
         let color_2 = Color::from_hex("#dd5ac1");
         Ok(Blush { 
             // db,
-            shown: false,  
-            count: 0,
             font: egui::FontId::new(30.0, FontFamily::Monospace),
-            base_color: color,
-            base_color_2: color_2,
-            three_strip: ThreeStrip::new(&color, 400.0, 200.0),
-            three_strip_2: ThreeStrip::new(&color_2, 400.0, 200.0),
+            state: State::default(),
+            chan: Chan::default(),
+            three_strip: ThreeStrip::new(&color),
         })
     }
 
@@ -49,14 +45,18 @@ impl eframe::App for Blush {
         let _ = egui::TopBottomPanel::top("colors").show(ctx, |ui| {
             self.apply_styles(ui);
 
-            self.count += 1;
+            // self.count += 1;
 
-            if ui.button("Hello").clicked() {
-                self.shown = !self.shown;
-            }
-            if self.shown {
-                ui.label(format!("I am visible!, {}", self.count));
-            }
+            // if ui.button("Hello").clicked() {
+            //     self.shown = !self.shown;
+            // }
+            // if self.shown {
+            //     ui.label(format!("I am visible!, {}", self.count));
+            // }
+    
+            let num = 5;
+            let max_width = ui.max_rect().width();
+            let each_width = max_width / (num as f32) - ui.spacing().item_spacing.x * (1.0 - 1.0/(num as f32));
 
             // ui.add(self.ss.widget(&mut self.base_color, &[[1.0, 1.0], [1.0, 1.0]], &hue_lerp(0.0, 1.0)));
             // egui::ScrollArea::horizontal().show(ui, |ui| {
@@ -64,10 +64,12 @@ impl eframe::App for Blush {
             //     // self.three_strip_2.place(ui, &mut self.base_color_2);
             //     log::info!("{:?}", ui.available_size());
             ui.horizontal(|ui| {
-                for _ in 1..10 {
-                    self.three_strip.place(ui, &mut self.base_color);
+                for _ in 1..=num {
+                    self.three_strip.place(ui, self.state.base_color(), &mut self.chan, each_width, INFINITY);
                 }
             });
+
+            self.state.process_chan(&mut self.chan)
             // });
             
             // egui::Grid::new("colors").show(ui, |ui| {
