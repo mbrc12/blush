@@ -79,7 +79,7 @@ impl Color {
         let Color{luminance, chroma, hue} = self;
         
         let luminance = (luminance + 0.4) % 1.0;
-        let hue = (hue + 0.5)/2.0;
+        // let hue = 
 
         Color{luminance, chroma, hue}
     }

@@ -4,8 +4,6 @@ use egui::{Widget, Ui, Rounding, Sense, vec2, Rect, pos2, Color32, Pos2};
 
 use crate::{state::{Chan, Message, MapData, Location}, util::{color::Color, RoundedRect}};
 
-use super::ThreeStrip;
-
 pub struct ColorMap {}
 
 fn make_rounding(radius: f32) -> Rounding {
@@ -28,7 +26,9 @@ impl ColorMap {
             let (rows, cols) = map.size();
             let aspect_ratio = cols as f32 / rows as f32;
             let rect_width = max_width.min(max_height * aspect_ratio);
-            let rect_height = max_width / aspect_ratio;
+            let rect_height = rect_width / aspect_ratio;
+            
+            // dbg!(max_width, max_height, rect_width, rect_height, aspect_ratio, rows, cols);
 
             let (id, rect) = ui.allocate_space(vec2(rect_width, rect_height));
             let response = ui.interact(rect, id, Sense::union(Sense::hover(), Sense::click()));
@@ -96,15 +96,13 @@ fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, loc: Locat
             chan.push(Message::DeleteColor { loc });
         }
     } else {
-        // TODO: Display name /////////////
-        // let name = map.index_at(loc).unwrap();
-        // let len = name.len();
+        rr.label_inset(painter, map.index_at(loc).unwrap(), button_color, None);
     }
 }
 
 const INVALID_COLOR_DARK: Color = Color{hue: 0.0, luminance: 0.3, chroma: 0.0};
 const INVALID_COLOR_LIGHT: Color = Color{hue: 0.0, luminance: 0.4, chroma: 0.0};
-const TESSELATE_LEVEL: usize = 8;
+const TESSELATE_LEVEL: usize = 4;
 
 fn invalid_cell(painter: &egui::Painter, rr: RoundedRect, loc: Location, 
                 map: &MapData, chan: &mut Chan, mouse: Pos2, click: bool) {

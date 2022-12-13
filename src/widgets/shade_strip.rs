@@ -1,33 +1,5 @@
 use egui::{Color32, Rounding, Ui, vec2, Sense, Widget, pos2, Stroke, Rect, FontId, Layout};
-use crate::{util::color::{Color, ColorDB, shades, Lerp}, state::{Chan, Message}};
-
-#[derive(Clone, Copy)]
-pub struct RoundingLegend {
-    nw: f32,
-    sw: f32,
-    ne: f32, 
-    se: f32
-}
-
-impl RoundingLegend {
-    pub const fn new(nw: i32, sw: i32, ne: i32, se: i32) -> RoundingLegend {
-        RoundingLegend{
-            nw: nw as f32,
-            sw: sw as f32,
-            ne: ne as f32,
-            se: se as f32
-        }
-    }
-
-    pub fn to_rounding(self, radius: f32) -> Rounding {
-        Rounding {
-            nw: self.nw * radius,
-            sw: self.sw * radius,
-            ne: self.ne * radius,
-            se: self.se * radius
-        }
-    }
-}
+use crate::{util::{color::{Color, ColorDB, shades, Lerp}, RoundingLegend, RoundedRect, }, state::{Chan, Message}};
 
 pub struct ShadeStrip {
     last_color: Color,
@@ -144,11 +116,8 @@ impl ShadeStrip {
                 painter.rect_filled(rect, rounding, draw_color.to_color32());
 
                 if self.show_hex {
-                    let font = FontId::monospace(rect.height() * 0.75f32);
-                    let galley = 
-                        painter.layout(base_color.to_hex(), font, base_color.accent(), rect.width());
-                    let position = rect.center() - galley.rect.size()/2f32;
-                    painter.galley(position, galley);
+                    let rr: RoundedRect = (rect, rounding).into();
+                    rr.label_inset(painter, base_color.to_hex(), base_color.accent_color(), None);
                 }
             }
             

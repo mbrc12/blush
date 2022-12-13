@@ -10,7 +10,7 @@ use util::color::Color;
 
 use egui::{FontFamily, TextStyle, Ui, Layout, Align, pos2, vec2};
 
-use widgets::{ShadeStrip, ThreeStrip, ColorMap};
+use widgets::{ShadeStrip, ThreeStrip, ColorMap, ColorLabel};
 
 pub struct Blush {
     // db: VPTree<f64, NamedColor>,
@@ -21,6 +21,12 @@ pub struct Blush {
     color_map: ColorMap,
 }
 
+#[derive(Debug, PartialEq)]
+enum Enum {
+    First,
+    Second,
+    Third,
+}
 impl Blush {
 
     const UPDATE_MAX_INTERVAL: Duration = Duration::from_millis(500); // atleast one refresh in this time
@@ -29,18 +35,16 @@ impl Blush {
         cc.egui_ctx.set_pixels_per_point(1.0f32);
         // let db = util::color::load_db(Path::new("res/colors.json"))?;
         let mut fonts = egui::FontDefinitions::default();
-        fonts.font_data.insert("Monogram".into(), 
+        fonts.font_data.insert("uifont".into(), 
                                egui::FontData::from_static(include_bytes!("../res/Raleway-Regular.ttf")));
-        fonts.families.get_mut(&FontFamily::Monospace).unwrap()
-            .insert(0, "Monogram".to_owned());
         fonts.families.get_mut(&FontFamily::Proportional).unwrap()
-            .insert(0, "Monogram".to_owned());
+            .insert(0, "uifont".to_owned());
 
         cc.egui_ctx.set_fonts(fonts);
 
         Ok(Blush { 
             // db,
-            font: egui::FontId::new(30.0, FontFamily::Name("Monogram".into())),
+            font: egui::FontId::new(30.0, FontFamily::Name("uifont".into())),
             state: State::default(),
             chan: Chan::default(),
             color_picker: ThreeStrip::new(&Color::default()),
@@ -55,7 +59,7 @@ impl Blush {
 }
 
 impl eframe::App for Blush {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let _ = egui::TopBottomPanel::top("colors").show(ctx, |ui| {
             
             ctx.request_repaint_after(Blush::UPDATE_MAX_INTERVAL);
@@ -76,16 +80,13 @@ impl eframe::App for Blush {
             //     }
             // });
            
+            let max_size = frame.info().window_info.size;
+    
             egui::TopBottomPanel::top("color_pickers").show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    let response = ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 300.0, 300.0));
-                    // let colorpicker_id = ui.make_persistent_id("color-picker");
-                    
-                    // if self.state.color_choose_state {
-                    //     ui.memory().open_popup(colorpicker_id);
-                    // } else if ui.memory().is_popup_open(colorpicker_id){
-                    //     ui.memory().close_popup();
-                    // }
+                ui.vertical_centered(|ui| {
+                    let response = ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 
+                                                                   max_size.x,
+                                                                   max_size.y/2.0));
 
                     if self.state.color_map().choose_color_mode() {
                         // println!("{:?}", self.state.color_choose_at());
@@ -103,6 +104,21 @@ impl eframe::App for Blush {
                             });
 
                     }
+                    response
+                })});
+
+            egui::CentralPanel::default().show(ctx, |ui|{
+                ui.vertical(|ui| {
+                    // let colorpicker_id = ui.make_persistent_id("color-picker");
+                    
+                    // if self.state.color_choose_state {
+                    //     ui.memory().open_popup(colorpicker_id);
+                    // } else if ui.memory().is_popup_open(colorpicker_id){
+                    //     ui.memory().close_popup();
+                    // }
+
+
+                    ui.add(ColorLabel::new().construct(Color::default(), "2".to_owned(), 100.0, 100.0));
 
                     // egui::popup::popup_below_widget(ui, colorpicker_id,
                     //                                 &response, |ui| {
@@ -112,6 +128,17 @@ impl eframe::App for Blush {
                     //                                        &mut self.chan, 300.0, 300.0, !self.state.color_choose_state);
                     //             });
                     //     });
+                    
+
+                    let mut selected = Enum::Second;
+
+                    egui::ComboBox::from_label("Select one!")
+                        .selected_text(format!("{:?}", selected))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut selected, Enum::First, "First");
+                            ui.selectable_value(&mut selected, Enum::Second, "Second");
+                            ui.selectable_value(&mut selected, Enum::Third, "Third");
+                        });
                 })
             });
 

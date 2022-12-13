@@ -28,8 +28,8 @@ pub struct MapData {
 impl Default for MapData {
     fn default() -> Self {
         Self {
-            rows: 2,
-            cols: 3,
+            rows: 5,
+            cols: 10,
             map: HashMap::from([
                                ((0, 0), 0), 
                                ((1, 0), 1),

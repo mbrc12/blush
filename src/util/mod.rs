@@ -1,7 +1,7 @@
 pub mod vptree;
 pub mod color;
 pub mod buffer;
-pub mod rounded_rect;
+pub mod rounding_util;
 
-pub use rounded_rect::RoundedRect;
-
+pub use rounding_util::RoundedRect;
+pub use rounding_util::RoundingLegend;

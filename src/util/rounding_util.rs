@@ -1,4 +1,6 @@
-use egui::{Rect, Rounding, vec2, pos2};
+use egui::{Rect, Rounding, vec2, pos2, FontId};
+
+use super::color::Color;
 
 #[derive(Clone, Copy)]
 pub struct RoundedRect {
@@ -6,7 +8,17 @@ pub struct RoundedRect {
     pub rounding: Rounding
 }
 
+#[derive(Copy, Clone, Debug, Default)]
+pub struct RoundingLegend {
+    nw: f32,
+    sw: f32,
+    ne: f32, 
+    se: f32
+}
+
 impl RoundedRect {
+
+    const DEFAULT_INSET_FRAC: f32 = 0.8;
 
     // Split rounded rectangle, output in row-major order.
     pub fn split(&self, rows: usize, cols: usize) -> Vec<RoundedRect> {
@@ -22,13 +34,16 @@ impl RoundedRect {
                 if r == 0 {
                     if c == 0 {
                         rnd_rc.nw = rounding.nw;
-                    } else if c + 1 == cols {
+                    } 
+                    if c + 1 == cols {
                         rnd_rc.ne = rounding.ne;
                     }
-                } else if r + 1 == rows {
+                } 
+                if r + 1 == rows {
                     if c == 0 {
                         rnd_rc.sw = rounding.sw;
-                    } else if c + 1 == cols {
+                    } 
+                    if c + 1 == cols {
                         rnd_rc.se = rounding.se;
                     }
                 }
@@ -45,6 +60,13 @@ impl RoundedRect {
         let rrs = self.split(2, 1);
         (rrs[0], rrs[1])
     }
+
+    pub fn label_inset(&self, painter: &egui::Painter, text: String, color: Color, size_ratio: Option<f32>) {
+        let font = FontId::proportional(self.rect.height() * size_ratio.unwrap_or(RoundedRect::DEFAULT_INSET_FRAC));
+        let galley = painter.layout(text, font, color.to_color32(), self.rect.width());
+        let top_pos = self.rect.center() - galley.rect.size()/2.0;
+        painter.galley(top_pos, galley);
+    }
 }
 
 impl From<(Rect, Rounding)> for RoundedRect {
@@ -52,3 +74,24 @@ impl From<(Rect, Rounding)> for RoundedRect {
         RoundedRect { rect: rr.0, rounding: rr.1 }
     }
 }
+
+impl RoundingLegend {
+    pub const fn new(nw: i32, sw: i32, ne: i32, se: i32) -> RoundingLegend {
+        RoundingLegend{
+            nw: nw as f32,
+            sw: sw as f32,
+            ne: ne as f32,
+            se: se as f32
+        }
+    }
+
+    pub fn to_rounding(self, radius: f32) -> Rounding {
+        Rounding {
+            nw: self.nw * radius,
+            sw: self.sw * radius,
+            ne: self.ne * radius,
+            se: self.se * radius
+        }
+    }
+}
+

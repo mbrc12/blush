@@ -1,10 +1,10 @@
-use std::{time::{SystemTime, Duration}, alloc::System};
+use std::time::{SystemTime, Duration};
 
 use egui::{Ui, InnerResponse};
 
-use crate::{util::color::{Color, hue_lerp, chroma_lerp, luminance_lerp}, state::{Chan, Message}};
+use crate::{util::{color::{Color, hue_lerp, chroma_lerp, luminance_lerp}, RoundingLegend}, state::{Chan, Message}};
 
-use super::{ShadeStrip, shade_strip::RoundingLegend};
+use super::ShadeStrip;
 
 pub struct ThreeStrip {
     axis: [ShadeStrip; 3],
@@ -56,7 +56,6 @@ impl ThreeStrip {
         }
 
         if resp.response.hovered() {
-            dbg!("entered!");
             self.entered = true;
         }
 
