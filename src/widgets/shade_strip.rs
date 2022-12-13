@@ -116,12 +116,12 @@ impl ShadeStrip {
                         self.new_color = *shade; 
                         painter.circle_stroke(shade_rect.center(), dot_radius, 
                                               Stroke{width: Self::SELECT_WIDTH,
-                                                     color: shade.borw()
+                                                     color: shade.accent()
                                               });
                     }
 
                     if i == index {
-                        painter.circle_filled(shade_rect.center(), dot_radius , shade.borw());
+                        painter.circle_filled(shade_rect.center(), dot_radius , shade.accent());
                     }
                 }
             } 
@@ -146,7 +146,7 @@ impl ShadeStrip {
                 if self.show_hex {
                     let font = FontId::monospace(rect.height() * 0.75f32);
                     let galley = 
-                        painter.layout(base_color.to_hex(), font, base_color.borw(), rect.width());
+                        painter.layout(base_color.to_hex(), font, base_color.accent(), rect.width());
                     let position = rect.center() - galley.rect.size()/2f32;
                     painter.galley(position, galley);
                 }

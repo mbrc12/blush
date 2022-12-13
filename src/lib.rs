@@ -1,13 +1,14 @@
 mod widgets;
 pub mod util;
+pub mod gen;
 mod state;
 
-use std::{path::Path, io};
+use std::{path::Path, io, time::Duration};
 
 use state::{State, Chan};
 use util::color::Color;
 
-use egui::{FontFamily, TextStyle, Ui, Layout, Align};
+use egui::{FontFamily, TextStyle, Ui, Layout, Align, pos2, vec2};
 
 use widgets::{ShadeStrip, ThreeStrip, ColorMap};
 
@@ -16,22 +17,33 @@ pub struct Blush {
     font: egui::FontId,
     state: State,
     chan: Chan,
-    three_strip: ThreeStrip,
+    color_picker: ThreeStrip,
     color_map: ColorMap,
 }
 
 impl Blush {
-    pub fn new(_cc: &eframe::CreationContext) -> Result<Self, io::Error> {
-        _cc.egui_ctx.set_pixels_per_point(1.0f32);
+
+    const UPDATE_MAX_INTERVAL: Duration = Duration::from_millis(500); // atleast one refresh in this time
+
+    pub fn new(cc: &eframe::CreationContext) -> Result<Self, io::Error> {
+        cc.egui_ctx.set_pixels_per_point(1.0f32);
         // let db = util::color::load_db(Path::new("res/colors.json"))?;
-        let color = Color::from_hex("#ff355e");
-        let color_2 = Color::from_hex("#dd5ac1");
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert("Monogram".into(), 
+                               egui::FontData::from_static(include_bytes!("../res/Raleway-Regular.ttf")));
+        fonts.families.get_mut(&FontFamily::Monospace).unwrap()
+            .insert(0, "Monogram".to_owned());
+        fonts.families.get_mut(&FontFamily::Proportional).unwrap()
+            .insert(0, "Monogram".to_owned());
+
+        cc.egui_ctx.set_fonts(fonts);
+
         Ok(Blush { 
             // db,
-            font: egui::FontId::new(30.0, FontFamily::Monospace),
+            font: egui::FontId::new(30.0, FontFamily::Name("Monogram".into())),
             state: State::default(),
             chan: Chan::default(),
-            three_strip: ThreeStrip::new(&color),
+            color_picker: ThreeStrip::new(&Color::default()),
             color_map: ColorMap::new(),
         })
     }
@@ -45,6 +57,8 @@ impl Blush {
 impl eframe::App for Blush {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let _ = egui::TopBottomPanel::top("colors").show(ctx, |ui| {
+            
+            ctx.request_repaint_after(Blush::UPDATE_MAX_INTERVAL);
             self.apply_styles(ui);
 
             // let num = 5;
@@ -65,22 +79,39 @@ impl eframe::App for Blush {
             egui::TopBottomPanel::top("color_pickers").show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     let response = ui.add(self.color_map.construct(self.state.color_map(), &mut self.chan, 300.0, 300.0));
-                    let colorpicker_id = ui.make_persistent_id("color-picker");
+                    // let colorpicker_id = ui.make_persistent_id("color-picker");
                     
-                    if self.state.color_choose_state {
-                        ui.memory().open_popup(colorpicker_id);
-                    } else if ui.memory().is_popup_open(colorpicker_id){
-                        ui.memory().close_popup();
-                    }
+                    // if self.state.color_choose_state {
+                    //     ui.memory().open_popup(colorpicker_id);
+                    // } else if ui.memory().is_popup_open(colorpicker_id){
+                    //     ui.memory().close_popup();
+                    // }
 
-                    egui::popup::popup_below_widget(ui, colorpicker_id,
-                                                    &response, |ui| {
+                    if self.state.color_map().choose_color_mode() {
+                        // println!("{:?}", self.state.color_choose_at());
+                        egui::Window::new("color-picker")
+                            .title_bar(false)
+                            .auto_sized()
+                            .open(&mut true)
+                            .fixed_pos(self.state.color_map().choose_color_pos())
+                            .show(ctx, |ui| {
                                 ui.vertical(|ui| {
                                     ui.label("Choose color:");
-                                    self.three_strip.place(ui, self.state.base_color(), 
-                                                           &mut self.chan, 300.0, 300.0, !self.state.color_choose_state);
+                                    self.color_picker.place(ui, self.state.color_map().active_color(),
+                                        &mut self.chan, 300.0, 300.0);
                                 });
-                        });
+                            });
+
+                    }
+
+                    // egui::popup::popup_below_widget(ui, colorpicker_id,
+                    //                                 &response, |ui| {
+                    //             ui.vertical(|ui| {
+                    //                 ui.label("Choose color:");
+                    //                 self.three_strip.place(ui, self.state.base_color(), 
+                    //                                        &mut self.chan, 300.0, 300.0, !self.state.color_choose_state);
+                    //             });
+                    //     });
                 })
             });
 

@@ -4,6 +4,8 @@ use egui::{Widget, Ui, Rounding, Sense, vec2, Rect, pos2, Color32, Pos2};
 
 use crate::{state::{Chan, Message, MapData, Location}, util::{color::Color, RoundedRect}};
 
+use super::ThreeStrip;
+
 pub struct ColorMap {}
 
 fn make_rounding(radius: f32) -> Rounding {
@@ -17,7 +19,7 @@ impl ColorMap {
     const ROUND_RADIUS_FRAC: f32 = 0.05;
 
     pub fn new() -> Self {
-        ColorMap {  }
+        ColorMap { }
     }
 
     pub fn construct<'a>(&'a mut self, map: &'a MapData, chan: &'a mut Chan, 
@@ -80,7 +82,7 @@ fn valid_cell(painter: &egui::Painter, rr: RoundedRect, color: Color, loc: Locat
     let RoundedRect{ rect, rounding } = rr;
     painter.rect_filled(rect, rounding, color.to_color32());
 
-    let button_color = select_color(color);
+    let button_color = color.accent_color();
 
     let (top_rr, bot_rr) = rr.split_ver_flat();
     if top_rr.rect.contains(mouse) {
@@ -107,7 +109,6 @@ const TESSELATE_LEVEL: usize = 8;
 fn invalid_cell(painter: &egui::Painter, rr: RoundedRect, loc: Location, 
                 map: &MapData, chan: &mut Chan, mouse: Pos2, click: bool) {
     let RoundedRect{ rect, rounding } = rr;
-
     if rect.contains(mouse) {
         tesselate(painter, rr, TESSELATE_LEVEL, 
                   [INVALID_COLOR_LIGHT, INVALID_COLOR_DARK]);

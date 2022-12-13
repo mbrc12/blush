@@ -3,6 +3,8 @@ use std::{collections::HashMap};
 use crate::util::{color::Color, buffer::Buffer};
 
 mod map_data;
+pub use map_data::IndexRepr;
+
 use egui::Pos2;
 pub use map_data::MapData;
 pub use map_data::Location;
@@ -11,11 +13,7 @@ pub type Chan = Buffer<Message>;
 
 #[derive(Default)]
 pub struct State {
-    base_color: Color,
     color_map: map_data::MapData,
-    pub color_choose_state: bool,
-    pub color_choose_at: Pos2,
-    choose_loc: Location,
 }
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -48,41 +46,27 @@ impl State {
             // From three-strip ////////// 
 
             ChangeColor { to } => {
-                if self.color_choose_state {
-                    self.color_map.update_color(self.choose_loc, to);
-                    self.base_color = to;
-                }
+                self.color_map.update_color(to);
             }
 
             Distracted => {
-                self.color_choose_state = false;
+                self.color_map.distracted();
             }
         
             // From color-map ///////////
             
             AddColor { loc, pos } => {
-                self.color_map.add_color(loc);
-                self.base_color = self.color_map.color_at(loc).unwrap();
-                self.color_choose_state = true;
-                self.choose_loc = loc;
+                self.color_map.add_color(loc, pos);
             }
             
             UpdateColor { loc, pos } => {
-                self.base_color = self.color_map.color_at(loc).unwrap();
-                self.color_choose_state = true;
-                self.choose_loc = loc;
+                self.color_map.start_change_color(loc, pos);
             }
 
             DeleteColor { loc } => {
                 self.color_map.delete_color(loc);
-                self.color_choose_state = false;
             }
-
         }
-    }
-
-    pub fn base_color(&self) -> Color {
-        self.base_color
     }
 
     pub fn color_map(&self) -> &map_data::MapData {

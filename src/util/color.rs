@@ -16,7 +16,7 @@ pub struct Color {
 
 impl Default for Color {
     fn default() -> Self {
-        Self { luminance: 0.6, chroma: 0.7, hue: 0.5 }
+        Color::from_hex("#de5d83")
     }
 }
 
@@ -71,6 +71,21 @@ impl Color {
         } else {
             Color32::BLACK
         }
+    }
+
+    // Return a color that is legible and nice when placed on another color, preferably a shade of
+    // the color.
+    pub fn accent_color(self) -> Color {
+        let Color{luminance, chroma, hue} = self;
+        
+        let luminance = (luminance + 0.4) % 1.0;
+        let hue = (hue + 0.5)/2.0;
+
+        Color{luminance, chroma, hue}
+    }
+
+    pub fn accent(self) -> Color32 {
+        self.accent_color().to_color32()
     }
 }
 
